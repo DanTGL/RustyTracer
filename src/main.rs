@@ -1,18 +1,22 @@
-
-use std::sync::Arc;
 use log::error;
+use std::sync::Arc;
 
-use math::{Vec3, Real};
+use math::{Real, Vec3};
 use na::{pi, quarter_pi};
-use pixels::{SurfaceTexture, Pixels, Error};
-use rand::{RngCore, Rng, distributions::Uniform, thread_rng};
-use scene::{sphere::Sphere, Hittable, scene::Scene, camera::Camera};
-use winit::{event_loop::{self, EventLoop, ControlFlow}, dpi::LogicalSize, window::WindowBuilder, event::{Event, VirtualKeyCode}};
+use pixels::{Error, Pixels, SurfaceTexture};
+use rand::{Rng, RngCore, distributions::Uniform, thread_rng};
+use scene::{Hittable, camera::Camera, scene::Scene, sphere::Sphere};
+use winit::{
+    dpi::LogicalSize,
+    event::{Event, VirtualKeyCode},
+    event_loop::{self, ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
 use winit_input_helper::WinitInputHelper;
 
 use rayon::prelude::*;
 
-use crate::{scene::material::*, math::PI};
+use crate::{math::PI, scene::material::*};
 
 extern crate nalgebra_glm as na;
 
@@ -23,10 +27,17 @@ const WIDTH: u32 = 400;
 const ASPECT_RATIO: Real = 16.0 / 9.0;
 const HEIGHT: u32 = (WIDTH as Real / ASPECT_RATIO) as u32;
 
-const CAMERA_SPEED: Real = 0.05;
+const CAMERA_SPEED: Real = 0.5;
 
-fn gen_image(frame: &mut [u8], rng: &mut dyn RngCore, cam: &Camera, scene: &Scene, width: u32, height: u32, samples: u32) {
-
+fn gen_image(
+    frame: &mut [u8],
+    rng: &mut dyn RngCore,
+    cam: &Camera,
+    scene: &Scene,
+    width: u32,
+    height: u32,
+    samples: u32,
+) {
     /*let origin = Vec3::new(0.0, 0.0, 0.0);
     let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
     let vertical = Vec3::new(0.0, viewport_height, 0.0);
@@ -35,59 +46,60 @@ fn gen_image(frame: &mut [u8], rng: &mut dyn RngCore, cam: &Camera, scene: &Scen
     //let s1 = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
 
     //for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-    frame.par_chunks_exact_mut(4).enumerate().for_each(|(i, pixel)| {
-        let mut r = thread_rng();
-        //let u = (x as Real) / ((WIDTH - 1) as Real);
-        //let v = (y as Real) / ((HEIGHT - 1) as Real);
-        let x = (i % width as usize) as u32;
-        let y = (i / width as usize) as u32;
+    frame
+        .par_chunks_exact_mut(4)
+        .enumerate()
+        .for_each(|(i, pixel)| {
+            let mut r = thread_rng();
+            //let u = (x as Real) / ((WIDTH - 1) as Real);
+            //let v = (y as Real) / ((HEIGHT - 1) as Real);
+            let x = (i % width as usize) as u32;
+            let y = (i / width as usize) as u32;
 
-        //let r = Ray::new(origin, lower_left + u * horizontal + v * vertical - origin);
-        let mut color = Vec3::zeros();
+            //let r = Ray::new(origin, lower_left + u * horizontal + v * vertical - origin);
+            let mut color = Vec3::zeros();
 
-        
-        for _ in 0..samples {
-            let u = (x as Real + r.sample(Uniform::new_inclusive(0.0 as Real, 1.0 as Real))) / (width as Real - 1.0);
-            let v = ((height - y - 1) as Real + r.sample(Uniform::new_inclusive(0.0, 1.0))) / (height as Real - 1.0);
+            for _ in 0..samples {
+                let u = (x as Real + r.sample(Uniform::new_inclusive(0.0 as Real, 1.0 as Real)))
+                    / (width as Real - 1.0);
+                let v = ((height - y - 1) as Real + r.sample(Uniform::new_inclusive(0.0, 1.0)))
+                    / (height as Real - 1.0);
 
-            let ray = cam.get_ray(u, v);
+                let ray = cam.get_ray(u, v);
 
-            if let Some(col) = scene.raytrace(&mut r, &ray, 16) {
-                //let col = 0.5 * (rec. + Vec3::new(1.0, 1.0, 1.0));
-                //*pixel = Rgb([col.x as f32, col.y as f32, col.z as f32]);
-                color += col;
-            } else {
-                //*pixel = Rgb([0.0, 0.0, 0.0]);
-            //*pixel = f(&r);
+                if let Some(col) = scene.raytrace(&mut r, &ray, 16) {
+                    //let col = 0.5 * (rec. + Vec3::new(1.0, 1.0, 1.0));
+                    //*pixel = Rgb([col.x as f32, col.y as f32, col.z as f32]);
+                    color += col;
+                } else {
+                    //*pixel = Rgb([0.0, 0.0, 0.0]);
+                    //*pixel = f(&r);
+                }
             }
-        }
 
-        color /= samples as Real;
+            color /= samples as Real;
 
-        let col_arr = [
-            (256.0 * color.x.clamp(0.0, 0.999)) as u8,
-            (256.0 * color.y.clamp(0.0, 0.999)) as u8,
-            (256.0 * color.z.clamp(0.0, 0.999)) as u8,
-            255
-        ];
+            let col_arr = [
+                (256.0 * color.x.clamp(0.0, 0.999)) as u8,
+                (256.0 * color.y.clamp(0.0, 0.999)) as u8,
+                (256.0 * color.z.clamp(0.0, 0.999)) as u8,
+                255,
+            ];
 
-        pixel.copy_from_slice(&col_arr)
-        
-    });
-
+            pixel.copy_from_slice(&col_arr)
+        });
 }
 
 fn main() -> Result<(), Error> {
     use std::time::Instant;
     println!("Hello, world!");
 
-    
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
 
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        
+
         WindowBuilder::new()
             .with_title("Raytracer")
             .with_inner_size(size)
@@ -102,26 +114,25 @@ fn main() -> Result<(), Error> {
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
 
-
     let mut rng = rand::thread_rng();
 
     let mat_left = Arc::new(Lambertian { albedo: Vec3::z() });
     let mat_right = Arc::new(Lambertian { albedo: Vec3::x() });
 
-    let mut origin = Vec3::zeros();
+    //let mut origin = Vec3::zeros();
 
-    let R: Real = quarter_pi::<Real>().cos();
-    
+    let radius: Real = quarter_pi::<Real>().cos();
+
     let scene = Scene::new(vec![
         Box::new(Sphere {
-            center: Vec3::new(-R, 0.0, -1.0),
-            radius: R,
-            material: mat_left.clone()
+            center: Vec3::new(-radius, 0.0, -1.0),
+            radius: radius,
+            material: mat_left.clone(),
         }),
         Box::new(Sphere {
-            center: Vec3::new(R, 0.0, -1.0),
-            radius: R,
-            material: mat_right.clone()
+            center: Vec3::new(radius, 0.0, -1.0),
+            radius: radius,
+            material: mat_right.clone(),
         }),
         /*Box::new(Sphere {
             center: Vec3::new(0.0, -100.5, -1.0),
@@ -155,22 +166,31 @@ fn main() -> Result<(), Error> {
     let cam_up = Vec3::y();
 
     let mut camera = Camera::new(cam_pos, &cam_lookat, &cam_up, 90.0, ASPECT_RATIO);
-    
+
     let now = Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
-            gen_image(pixels.get_frame(), &mut rng, &camera, &scene, WIDTH, HEIGHT, 16);
+            gen_image(
+                pixels.get_frame(),
+                &mut rng,
+                &camera,
+                &scene,
+                WIDTH,
+                HEIGHT,
+                16,
+            );
 
             if pixels
                 .render()
                 .map_err(|e| error!("pixels.render() failed: {}", e))
-                .is_err() {
-                    *control_flow = ControlFlow::Exit;
-                    let elapsed = now.elapsed();
-                    println!("Elapsed: {:.2?}", elapsed);
-                    return;
-                }
+                .is_err()
+            {
+                *control_flow = ControlFlow::Exit;
+                let elapsed = now.elapsed();
+                println!("Elapsed: {:.2?}", elapsed);
+                return;
+            }
         }
 
         // Handle input events
@@ -183,15 +203,20 @@ fn main() -> Result<(), Error> {
                 return;
             }
 
-            
-
-
             if input.key_pressed(VirtualKeyCode::Left) {
-                cam_pos -= (cam_lookat - cam_pos).normalize().cross(&cam_up).normalize() * CAMERA_SPEED;
+                cam_pos -= (cam_lookat - cam_pos)
+                    .normalize()
+                    .cross(&cam_up)
+                    .normalize()
+                    * CAMERA_SPEED;
                 camera = Camera::new(cam_pos, &cam_lookat, &cam_up, 90.0, ASPECT_RATIO);
                 window.request_redraw();
             } else if input.key_pressed(VirtualKeyCode::Right) {
-                cam_pos += (cam_lookat - cam_pos).normalize().cross(&cam_up).normalize() * CAMERA_SPEED;
+                cam_pos += (cam_lookat - cam_pos)
+                    .normalize()
+                    .cross(&cam_up)
+                    .normalize()
+                    * CAMERA_SPEED;
                 camera = Camera::new(cam_pos, &cam_lookat, &cam_up, 90.0, ASPECT_RATIO);
                 window.request_redraw();
             }
@@ -202,11 +227,9 @@ fn main() -> Result<(), Error> {
             }
         }
     });
-    
+
     /*{
-        let img: RgbImage = 
+        let img: RgbImage =
         img.save("image.png").unwrap();
     }*/
-    
-    
 }

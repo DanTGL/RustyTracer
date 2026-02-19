@@ -29,7 +29,7 @@ impl Hittable for Sphere {
         let discriminant = half_b * half_b - a * c;
 
         if discriminant < 0.0 {
-            return None
+            return None;
         }
         let sqrtd = discriminant.sqrt();
 
@@ -37,7 +37,7 @@ impl Hittable for Sphere {
         if root < t_min || t_max < root {
             root = (-half_b + sqrtd) / a;
             if root < t_min || t_max < root {
-                return None
+                return None;
             }
         }
 
@@ -48,11 +48,10 @@ impl Hittable for Sphere {
             normal: (hit_point - self.center) / self.radius,
             t: t,
             front_face: false,
-            mat: self.material.clone()
+            mat: self.material.clone(),
         };
 
         rec.set_face_normal(ray, (rec.pos - self.center) / self.radius);
         Some(rec)
     }
 }
-

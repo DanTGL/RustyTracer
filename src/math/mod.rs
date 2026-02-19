@@ -13,7 +13,6 @@ pub trait RandomVec {
     fn random_unit_vector(rng: &mut dyn RngCore) -> Self;
 
     fn random_in_hemisphere(rng: &mut dyn RngCore, normal: &Vec3) -> Self;
-
 }
 
 pub trait VecUtils {
@@ -27,10 +26,9 @@ pub trait VecUtils {
 pub type Vec3 = na::TVec3<Real>;
 
 impl VecUtils for Vec3 {
-
     fn near_zero(&self) -> bool {
         const S: Real = 1e-8;
-        
+
         self.x.abs() < S && self.y.abs() < S && self.z < S
         //self.abs().lt(&Vec3::from_element(1e-8))
     }
@@ -45,7 +43,6 @@ impl VecUtils for Vec3 {
         let r_out_parallel = -(1.0 - r_out_perp.magnitude_squared()).abs().sqrt() * n;
         r_out_perp + r_out_parallel
     }
-
 }
 
 impl RandomVec for Vec3 {
@@ -53,7 +50,7 @@ impl RandomVec for Vec3 {
         Vec3::new(
             rng.gen_range(min..=max),
             rng.gen_range(min..=max),
-            rng.gen_range(min..=max)
+            rng.gen_range(min..=max),
         )
     }
     fn random_in_unit_sphere(rng: &mut dyn RngCore) -> Self {
@@ -82,5 +79,4 @@ impl RandomVec for Vec3 {
             -in_unit_sphere
         }
     }
-
 }
