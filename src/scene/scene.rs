@@ -1,8 +1,4 @@
-use std::ops::Mul;
-
-//use na::{Vector3, UnitVector3, Unit, base};
-
-use crate::{math::RandomVec, *};
+use crate::*;
 
 use math::{Vec3, ray::Ray};
 
@@ -39,7 +35,7 @@ impl Scene {
     }
 
     pub fn raytrace(&self, rng: &mut dyn RngCore, ray: &Ray, depth: usize) -> Option<Vec3> {
-        if depth <= 0 {
+        if depth == 0 {
             return None;
         }
 

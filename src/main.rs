@@ -2,21 +2,18 @@ use log::error;
 use std::sync::Arc;
 
 use math::{Real, Vec3};
-use na::{pi, quarter_pi};
 use pixels::{Error, Pixels, SurfaceTexture};
 use rand::{Rng, RngCore, distributions::Uniform, thread_rng};
-use scene::{Hittable, camera::Camera, scene::Scene, sphere::Sphere};
+use scene::{Hittable, camera::Camera, material::*, scene::Scene, sphere::Sphere};
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
-    event_loop::{self, ControlFlow, EventLoop},
+    event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 use winit_input_helper::WinitInputHelper;
 
 use rayon::prelude::*;
-
-use crate::{math::PI, scene::material::*};
 
 extern crate nalgebra_glm as na;
 
@@ -121,7 +118,7 @@ fn main() -> Result<(), Error> {
 
     //let mut origin = Vec3::zeros();
 
-    let radius: Real = quarter_pi::<Real>().cos();
+    let radius: Real = na::quarter_pi::<Real>().cos();
 
     let scene = Scene::new(vec![
         Box::new(Sphere {

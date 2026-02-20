@@ -1,9 +1,6 @@
-use na;
 use rand::{Rng, RngCore};
 pub mod ray;
-pub type Real = f32;
-
-pub const PI: Real = 3.1415926535897932385;
+pub type Real = f64;
 
 pub trait RandomVec {
     fn random(rng: &mut dyn RngCore, min: Real, max: Real) -> Self;
