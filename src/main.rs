@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use math::{Real, Vec3};
 use pixels::{Error, Pixels, SurfaceTexture};
-use rand::{Rng, RngCore, distributions::Uniform, thread_rng};
-use scene::{Hittable, camera::Camera, material::*, scene::Scene, sphere::Sphere};
+use rand::{distributions::Uniform, thread_rng, Rng, RngCore};
+use scene::{camera::Camera, material::*, scene::Scene, sphere::Sphere, Hittable};
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -24,17 +24,9 @@ const WIDTH: u32 = 400;
 const ASPECT_RATIO: Real = 16.0 / 9.0;
 const HEIGHT: u32 = (WIDTH as Real / ASPECT_RATIO) as u32;
 
-const CAMERA_SPEED: Real = 0.5;
+const CAMERA_SPEED: Real = 0.05;
 
-fn gen_image(
-    frame: &mut [u8],
-    rng: &mut dyn RngCore,
-    cam: &Camera,
-    scene: &Scene,
-    width: u32,
-    height: u32,
-    samples: u32,
-) {
+fn gen_image(frame: &mut [u8], cam: &Camera, scene: &Scene, width: u32, height: u32, samples: u32) {
     /*let origin = Vec3::new(0.0, 0.0, 0.0);
     let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
     let vertical = Vec3::new(0.0, viewport_height, 0.0);
@@ -111,11 +103,9 @@ fn main() -> Result<(), Error> {
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
 
-    let mut rng = rand::thread_rng();
-
     let mat_left = Arc::new(Lambertian { albedo: Vec3::z() });
     let mat_right = Arc::new(Lambertian { albedo: Vec3::x() });
-
+    let mat_metal = Arc::new(Metal::new(Vec3::new(0.9, 0.9, 0.9), 0.05));
     //let mut origin = Vec3::zeros();
 
     let radius: Real = na::quarter_pi::<Real>().cos();
@@ -130,6 +120,11 @@ fn main() -> Result<(), Error> {
             center: Vec3::new(radius, 0.0, -1.0),
             radius: radius,
             material: mat_right.clone(),
+        }),
+        Box::new(Sphere {
+            center: Vec3::new(2.0 * radius, radius, 0.0),
+            radius: radius,
+            material: mat_metal,
         }),
         /*Box::new(Sphere {
             center: Vec3::new(0.0, -100.5, -1.0),
@@ -168,15 +163,7 @@ fn main() -> Result<(), Error> {
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
-            gen_image(
-                pixels.get_frame(),
-                &mut rng,
-                &camera,
-                &scene,
-                WIDTH,
-                HEIGHT,
-                16,
-            );
+            gen_image(pixels.get_frame(), &camera, &scene, WIDTH, HEIGHT, 32);
 
             if pixels
                 .render()
@@ -200,7 +187,7 @@ fn main() -> Result<(), Error> {
                 return;
             }
 
-            if input.key_pressed(VirtualKeyCode::Left) {
+            if input.key_held(VirtualKeyCode::Left) {
                 cam_pos -= (cam_lookat - cam_pos)
                     .normalize()
                     .cross(&cam_up)
@@ -208,7 +195,7 @@ fn main() -> Result<(), Error> {
                     * CAMERA_SPEED;
                 camera = Camera::new(cam_pos, &cam_lookat, &cam_up, 90.0, ASPECT_RATIO);
                 window.request_redraw();
-            } else if input.key_pressed(VirtualKeyCode::Right) {
+            } else if input.key_held(VirtualKeyCode::Right) {
                 cam_pos += (cam_lookat - cam_pos)
                     .normalize()
                     .cross(&cam_up)
